@@ -26,7 +26,7 @@ def get_most_similar_response(df, query, top_k=1, index=0):
 
     # Prepare data
     vectorizer = TfidfVectorizer()
-    all_data = list(df['Topics']) + [query]
+    all_data = list(df['Questions']) + [query]
 
     # Vectorize with TF-IDF
     tfidf_matrix = vectorizer.fit_transform(all_data)
@@ -40,10 +40,10 @@ def get_most_similar_response(df, query, top_k=1, index=0):
     sorted_indeces = similarity_scores.argsort()[0][::-1][:top_k]
 
     # Fetch the corresponding response
-    most_similar_responses = df.iloc[sorted_indeces]['Response'].values
+    most_similar_responses = df.iloc[sorted_indeces]['Answers'].values
 
     response = None if len(most_similar_responses) == 0 else most_similar_responses[index]
-    response_index = df[df['Responses'] == response].index.item()
+    response_index = df[df['Answers'] == response].index.item()
 
     write_bot_message(response)
 
