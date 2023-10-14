@@ -1,38 +1,84 @@
-from collections import namedtuple
-import altair as alt
-import math
-import pandas as pd
+import time
+import asyncio
 import streamlit as st
+import pandas as pd
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_similarity
 
-"""
-# Welcome to Streamlit!
+def write_bot_message(response):
+    with st.chat_message('assistant'):
+        message_placeholder = st.empty()
+        full_response = ""
 
-Edit `/streamlit_app.py` to customize this app to your heart's desire :heart:
+        for character in response:
+            full_response += character
+            time.sleep(0.025)
 
-If you have any questions, checkout our [documentation](https://docs.streamlit.io) and [community
-forums](https://discuss.streamlit.io).
+            message_placeholder.markdown(full_response + "▌")
 
-In the meantime, below is an example of what you can do with just a few lines of code:
-"""
+        message_placeholder.markdown(full_response)
+        
+        st.session_state.messages.append({'role': 'assistant', 'content': full_response})
 
+def get_most_similar_response(df, query, top_k=1, index=0):
+    if query == '':
+        return
 
-with st.echo(code_location='below'):
-    total_points = st.slider("Number of points in spiral", 1, 5000, 2000)
-    num_turns = st.slider("Number of turns in spiral", 1, 100, 9)
+    # Prepare data
+    vectorizer = TfidfVectorizer()
+    all_data = list(df['Questions']) + [query]
 
-    Point = namedtuple('Point', 'x y')
-    data = []
+    # Vectorize with TF-IDF
+    tfidf_matrix = vectorizer.fit_transform(all_data)
 
-    points_per_turn = total_points / num_turns
+    # Compute Similarity
+    document_vectors = tfidf_matrix[:-1]
+    query_vector = tfidf_matrix[-1]
+    similarity_scores = cosine_similarity(query_vector, document_vectors)
 
-    for curr_point_num in range(total_points):
-        curr_turn, i = divmod(curr_point_num, points_per_turn)
-        angle = (curr_turn + 1) * 2 * math.pi * i / points_per_turn
-        radius = curr_point_num / total_points
-        x = radius * math.cos(angle)
-        y = radius * math.sin(angle)
-        data.append(Point(x, y))
+    # Pick the Top k response
+    sorted_indeces = similarity_scores.argsort()[0][::-1][:top_k]
 
-    st.altair_chart(alt.Chart(pd.DataFrame(data), height=500, width=500)
-        .mark_circle(color='#0068c9', opacity=0.5)
-        .encode(x='x:Q', y='y:Q'))
+    # Fetch the corresponding response
+    most_similar_responses = df.iloc[sorted_indeces]['Answers'].values
+
+    response = None if len(most_similar_responses) == 0 else most_similar_responses[index]
+    response_index = df[df['Responses'] == response].index.item()
+
+    write_bot_message(response)
+
+topics_responses = 'https://raw.githubusercontent.com/smgestupa/ccs311-cs41s1-streamlit-chatbot/main/content/NLP-Chatbot-Data.csv'
+
+chatdata_df = pd.read_csv(topics_responses)
+
+"""# Ask about the Genshin Impact"""
+
+last_query = ''
+
+async def suggest_topic(__seconds: float, func, *args, **kwargs):
+    await asyncio.sleep(__seconds)
+    func(*args, **kwargs)
+
+async_loop = asyncio.new_event_loop()
+
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+
+for message in st.session_state.messages:
+    with st.chat_message(message['role']):
+        st.markdown(message['content'])
+
+prompt = st.chat_input('What is your question?')
+
+if prompt is not None:
+    last_query = prompt
+
+    with st.chat_message('user'):
+        st.markdown(prompt)
+
+    st.session_state.messages.append({'role': 'user', 'content': prompt})
+
+    get_most_similar_response(chatdata_df, prompt)
+    async_loop.create_task(suggest_topic(15, get_most_similar_response, chatdata_df, last_query, top_k=2, index=-1))
+
+async_loop.run_forever()
