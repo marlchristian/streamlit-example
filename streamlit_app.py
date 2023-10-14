@@ -1,3 +1,5 @@
+pip install scikit-learn
+
 import time
 import asyncio
 import streamlit as st
