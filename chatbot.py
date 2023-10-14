@@ -47,7 +47,7 @@ def get_most_similar_response(df, query, top_k=1, index=0):
 
     write_bot_message(response)
 
-topics_responses = 'https://raw.githubusercontent.com/marlchristian/streamlit-example/main/content/NLP-Chatbot-Data.csv'
+topics_responses = 'https://raw.githubusercontent.com/marlchristian/streamlit-example/master/content/NLP-Chatbot-Data.csv'
 
 chatdata_df = pd.read_csv(topics_responses)
 
