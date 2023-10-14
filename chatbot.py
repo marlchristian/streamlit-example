@@ -26,7 +26,7 @@ def get_most_similar_response(df, query, top_k=1, index=0):
 
     # Prepare data
     vectorizer = TfidfVectorizer()
-    all_data = list(df['Questions']) + [query]
+    all_data = list(df['Topics']) + [query]
 
     # Vectorize with TF-IDF
     tfidf_matrix = vectorizer.fit_transform(all_data)
@@ -40,14 +40,14 @@ def get_most_similar_response(df, query, top_k=1, index=0):
     sorted_indeces = similarity_scores.argsort()[0][::-1][:top_k]
 
     # Fetch the corresponding response
-    most_similar_responses = df.iloc[sorted_indeces]['Answers'].values
+    most_similar_responses = df.iloc[sorted_indeces]['Response'].values
 
     response = None if len(most_similar_responses) == 0 else most_similar_responses[index]
     response_index = df[df['Responses'] == response].index.item()
 
     write_bot_message(response)
 
-topics_responses = 'https://raw.githubusercontent.com/smgestupa/ccs311-cs41s1-streamlit-chatbot/main/content/NLP-Chatbot-Data.csv'
+topics_responses = 'https://raw.githubusercontent.com/marlchristian/streamlit-example/main/content/NLP-Chatbot-Data.csv'
 
 chatdata_df = pd.read_csv(topics_responses)
 
